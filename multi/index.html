@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Hex Layer Map</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="map">
+  <div id="basemap"></div>
+  <canvas id="deck-canvas"></canvas>
+</div>
+
+<div id="sidebar-container">
+
+  <!-- Left column -->
+  <div class="sidebar-column" id="left-column">
+
+    <!-- ① Master: Stacks list -->
+    <div class="panel" id="stacks-panel">
+      <div class="panel-title"><span class="panel-icon">⬡</span> Stacks</div>
+      <div class="bulk-btns">
+        <button class="apply-btn small" id="btn-show-all-stacks">Show all</button>
+        <button class="apply-btn small" id="btn-hide-all-stacks">Hide all</button>
+        <button class="apply-btn small accent" id="btn-add-stack">＋ Stack</button>
+      </div>
+      <div id="stacks-list"></div>
+    </div>
+
+    <!-- ② Master: Global settings -->
+    <div class="panel" id="global-panel">
+      <div class="panel-title collapsible" id="global-panel-title">
+        <span class="panel-icon">⚙</span> Settings
+        <span class="toggle-arrow ml-auto">▶</span>
+      </div>
+      <div id="global-panel-body">
+        <div class="section-title">Display</div>
+        <label class="cfg-row">
+          <input type="checkbox" id="chk-flow">
+          <span>Flow arrows &amp; probabilities</span>
+        </label>
+        <label class="cfg-row">
+          <input type="checkbox" id="chk-map">
+          <span>Show basemap</span>
+        </label>
+
+        <div class="section-title" style="margin-top:11px" id="bg-section-label">Water color</div>
+        <div class="color-control-row">
+          <label id="bg-color-label">Color</label>
+          <input type="color" id="bg-color-picker" value="#ffffff">
+          <button class="color-preset-btn" id="btn-bg-white">White</button>
+          <button class="color-preset-btn" id="btn-bg-default">Default</button>
+        </div>
+
+        <div class="section-title" style="margin-top:11px">Center marker color</div>
+        <div class="color-control-row">
+          <label>Color</label>
+          <input type="color" id="center-color-picker" value="#ffffff">
+          <button class="color-preset-btn" id="btn-center-black">Black</button>
+          <button class="color-preset-btn" id="btn-center-default">Default</button>
+        </div>
+
+        <button class="btn-reset-view" id="btn-reset-view">⌖ Reset view</button>
+      </div>
+    </div>
+
+    <!-- ③ Stack config panel (shows when a stack is selected) -->
+    <div class="panel" id="stack-config-panel" style="display:none">
+      <div class="panel-title" id="stack-config-title">
+        <span class="panel-icon">◈</span>
+        <span id="stack-config-name">Stack Config</span>
+        <button class="btn-icon btn-close-config ml-auto" id="btn-deselect-stack" title="Close">✕</button>
+      </div>
+
+      <!-- Position -->
+      <div class="section-title">Position</div>
+      <div class="field-row">
+        <label>Latitude</label>
+        <div class="number-input-wrapper">
+          <input type="number" id="inp-lat" value="48.13" step="0.1" min="-90" max="90">
+          <div class="spinner-btns">
+            <div class="spinner-btn" data-delta="-0.1">−</div>
+            <div class="spinner-btn" data-delta="0.1">+</div>
+          </div>
+        </div>
+      </div>
+      <div class="field-row">
+        <label>Longitude</label>
+        <div class="number-input-wrapper">
+          <input type="number" id="inp-lng" value="-6.7" step="0.1" min="-180" max="180">
+          <div class="spinner-btns">
+            <div class="spinner-btn" data-delta="-0.1">−</div>
+            <div class="spinner-btn" data-delta="0.1">+</div>
+          </div>
+        </div>
+      </div>
+      <button class="apply-btn" id="btn-apply-center" style="margin-top:6px">Apply position</button>
+
+      <!-- Stack name -->
+      <div class="section-title" style="margin-top:11px">Name</div>
+      <div class="field-row">
+        <label>Label</label>
+        <input type="text" id="inp-stack-name" value="" maxlength="32">
+      </div>
+      <button class="apply-btn" id="btn-apply-stack-name" style="margin-top:4px">Rename stack</button>
+
+      <!-- Layers -->
+      <div class="section-title" style="margin-top:14px">Layers</div>
+      <div id="layer-editor"></div>
+      <button id="btn-add-layer">＋ Add layer</button>
+      <button class="btn-restore" id="btn-restore" style="margin-top:6px">↺ Restore default layers</button>
+    </div>
+
+    <!-- ④ Saves (collapsible) -->
+    <div class="panel" id="saveload-panel">
+      <div class="panel-title collapsible" id="saves-panel-title">
+        <span class="panel-icon">💾</span> Saves
+        <span class="toggle-arrow ml-auto">▶</span>
+      </div>
+      <div id="saves-panel-body" style="display:none">
+        <div id="save-panel"></div>
+        <div class="save-input-row" style="margin-top:8px">
+          <input type="text" id="cfg-name-input" placeholder="Config name…" maxlength="40">
+          <button class="btn-save-new" id="btn-save-cfg">Save</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right column (tooltip) -->
+  <div style="pointer-events:none">
+    <div class="panel" id="tooltip" style="pointer-events:auto;width:max-content;min-width:140px;display:none"></div>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/deck.gl@8.9.35/dist.min.js"></script>
+<script src="https://unpkg.com/h3-js@4.1.0/dist/h3-js.umd.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

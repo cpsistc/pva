@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PVA</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    min-height: 100vh;
+    background: #07071a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  #hex-bg {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Soft ambient glow */
+  body::after {
+    content: '';
+    position: fixed;
+    top: -20%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(74,174,255,0.07) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 48px;
+  }
+
+  /* ── Title block ── */
+  .title-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .title-label {
+    font-size: 10px;
+    color: rgba(255,255,255,0.28);
+    letter-spacing: 0.26em;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    font-size: clamp(80px, 14vw, 120px);
+    font-weight: 700;
+    color: rgba(200, 228, 255, 0.92);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    text-shadow:
+      0 0 20px rgba(74,174,255,0.55),
+      0 0 60px rgba(74,174,255,0.30),
+      0 0 120px rgba(74,174,255,0.15);
+  }
+
+  .title-divider {
+    width: 40px;
+    height: 1px;
+    background: rgba(74,174,255,0.3);
+    margin-top: 6px;
+  }
+
+  /* ── Panel / card ── */
+  .panel {
+    background: rgba(10,10,22,0.84);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    padding: 20px 24px;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    width: 320px;
+  }
+
+  .panel-title {
+    font-size: 10px;
+    color: rgba(255,255,255,0.38);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+
+  /* ── Buttons ── */
+  .btn-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 11px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03);
+    color: rgba(200, 228, 255, 0.92);
+    font-size: 11px;
+    font-family: inherit;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.2s, color 0.15s;
+    user-select: none;
+  }
+
+  .nav-btn:hover {
+    background: rgba(74,174,255,0.08);
+    border-color: rgba(74,174,255,0.3);
+    color: rgba(74,174,255,0.95);
+  }
+
+  .nav-btn:hover .btn-icon-arrow { opacity: 1; transform: translateX(0); }
+
+  .btn-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .btn-label { flex: 1; }
+
+  .btn-sub {
+    font-size: 9px;
+    color: rgba(255,255,255,0.25);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    margin-top: 1px;
+    display: block;
+  }
+
+  .nav-btn:hover .btn-sub { color: rgba(74,174,255,0.5); }
+
+  .btn-icon-arrow {
+    font-size: 10px;
+    color: rgba(74,174,255,0.6);
+    opacity: 0;
+    transform: translateX(-4px);
+    transition: opacity 0.15s, transform 0.15s;
+    flex-shrink: 0;
+  }
+
+  /* Flavour A — blue accent */
+  .btn-a .btn-dot { background: #4aaeff; box-shadow: 0 0 6px rgba(74,174,255,0.5); }
+
+  /* Flavour B — green accent */
+  .btn-b .btn-dot { background: #64c878; box-shadow: 0 0 6px rgba(100,200,120,0.5); }
+  .btn-b:hover {
+    background: rgba(100,200,120,0.08);
+    border-color: rgba(100,200,120,0.3);
+    color: rgba(100,200,120,0.95);
+  }
+  .btn-b:hover .btn-sub { color: rgba(100,200,120,0.5); }
+  .btn-b:hover .btn-icon-arrow { color: rgba(100,200,120,0.6); }
+
+
+</style>
+</head>
+<body>
+
+<canvas id="hex-bg"></canvas>
+
+<div class="container">
+
+  <div class="title-block">
+    <h1>PVA</h1>
+    <div class="title-divider"></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title">Select flavour</div>
+    <div class="btn-group">
+
+      <a class="nav-btn btn-a" href="./simple/index.html">
+        <span class="btn-dot"></span>
+        <span class="btn-label">
+          Single
+          <span class="btn-sub">Simple demo</span>
+        </span>
+        <span class="btn-icon-arrow">→</span>
+      </a>
+
+      <a class="nav-btn btn-b" href="./multi/index.html">
+        <span class="btn-dot"></span>
+        <span class="btn-label">
+          Multi
+          <span class="btn-sub">Experimental</span>
+        </span>
+        <span class="btn-icon-arrow">→</span>
+      </a>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+const canvas = document.getElementById('hex-bg');
+const ctx = canvas.getContext('2d');
+const R = 32;
+const GLOW_RADIUS = 120;  // px falloff distance
+const GLOW_COLOR  = [74, 174, 255]; // blue accent
+
+let mouse = { x: -9999, y: -9999 };
+let hexes = [];
+// per-hex animated brightness (0..1)
+let brightness = [];
+let raf;
+
+function hexPoints(cx, cy, r) {
+  const pts = [];
+  for (let i = 0; i < 6; i++) {
+    const a = Math.PI / 180 * (60 * i - 30);
+    pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+  }
+  return pts;
+}
+
+function buildGrid() {
+  hexes = [];
+  const w = R * Math.sqrt(3);
+  const h = R * 2;
+  const cols = Math.ceil(canvas.width  / w) + 2;
+  const rows = Math.ceil(canvas.height / (h * 0.75)) + 2;
+  for (let row = -1; row < rows; row++) {
+    for (let col = -1; col < cols; col++) {
+      const cx = col * w + (row % 2 === 0 ? 0 : w / 2);
+      const cy = row * h * 0.75;
+      hexes.push({ cx, cy, pts: hexPoints(cx, cy, R - 1) });
+    }
+  }
+  brightness = new Float32Array(hexes.length);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  for (let i = 0; i < hexes.length; i++) {
+    const { cx, cy, pts } = hexes[i];
+
+    // target brightness from mouse distance
+    const dx = cx - mouse.x, dy = cy - mouse.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const target = dist < GLOW_RADIUS ? Math.pow(1 - dist / GLOW_RADIUS, 1.6) : 0;
+
+    // smooth lerp toward target
+    brightness[i] += (target - brightness[i]) * 0.12;
+    const b = brightness[i];
+
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (let j = 1; j < 6; j++) ctx.lineTo(pts[j][0], pts[j][1]);
+    ctx.closePath();
+
+    if (b > 0.004) {
+      // fill glow
+      ctx.fillStyle = `rgba(${GLOW_COLOR[0]},${GLOW_COLOR[1]},${GLOW_COLOR[2]},${b * 0.07})`;
+      ctx.fill();
+      // bright stroke
+      const sa = 0.045 + b * 0.35;
+      ctx.strokeStyle = `rgba(${GLOW_COLOR[0]},${GLOW_COLOR[1]},${GLOW_COLOR[2]},${sa})`;
+    } else {
+      ctx.strokeStyle = 'rgba(255,255,255,0.045)';
+    }
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  raf = requestAnimationFrame(draw);
+}
+
+function resize() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  buildGrid();
+}
+
+window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+window.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
+window.addEventListener('resize', resize);
+
+resize();
+draw();
+</script>
+
+</body>
+</html>
