@@ -765,6 +765,8 @@ function setupCollapsible(titleId, bodyId, startOpen = false){
 // ═══════════════════════════════════════════════════════════
 //  EVENT WIRING
 // ═══════════════════════════════════════════════════════════
+window.addEventListener('contextmenu', e => e.preventDefault());
+
 document.getElementById('btn-show-all-stacks').addEventListener('click', ()=>{
   STACKS.forEach(s=>{ s.visible=true; s.layers.forEach(l=>l.visible=true); });
   rebuildState();

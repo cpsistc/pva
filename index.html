@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PVA</title>
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
+  * { margin:0; padding:0; box-sizing:border-box; user-select:none; }
 
   body {
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
@@ -303,6 +303,7 @@ function resize() {
 window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
 window.addEventListener('mouseleave', () => { mouse.x = -9999; mouse.y = -9999; });
 window.addEventListener('resize', resize);
+window.addEventListener('contextmenu', e => e.preventDefault());
 
 resize();
 draw();
