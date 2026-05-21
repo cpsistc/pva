@@ -37,7 +37,7 @@ let SHOW_AXIS    = false;
 let SHOW_SCI     = false;
 let SCI_SIDE     = 'left';
 let SCI_SCALE    = 1.0;
-let SCI_BG_COLOR = null; // null = default dark transparent
+let SCI_BG_COLOR = null; // null = default dark glass
 let BG_COLOR     = COLOR_WHITE;
 let CENTER_COLOR = null;
 let _idCounter   = 100;
@@ -47,8 +47,10 @@ let _lastHoverCfg  = null;
 
 // Axis drag state
 let _axisDragging  = false;
-let _axisOffsetX   = 0; // custom offset from default anchor, in CSS px
+let _axisOffsetX   = 0;
 let _axisOffsetY   = 0;
+let _axisLen       = 70;  // arm length in px
+let _axisWidth     = 2.5; // stroke width in px
 
 // ── Map viewport dimensions (excludes sidebar) ────────────
 function mapW(){ return document.getElementById('map-viewport').clientWidth; }
@@ -237,9 +239,9 @@ function drawAxisOverlay(){
   if(!SHOW_AXIS) return;
 
   // Default anchor: equidistant from left and bottom edges of map viewport
-  const LEN = 70;
-  const D   = LEN + 30;
-  const defaultX = D, defaultY = H - D;
+  const LEN = _axisLen;
+  const MARGIN = 100; // fixed anchor margin from bottom-left corner, never changes
+  const defaultX = MARGIN, defaultY = H - MARGIN;
   const anchorX = defaultX + _axisOffsetX;
   const anchorY = defaultY + _axisOffsetY;
   // Store for hit-testing in drag handler
@@ -273,25 +275,26 @@ function drawAxisOverlay(){
     const angle = Math.atan2(E.sy-O.sy, E.sx-O.sx);
     ctx.save(); ctx.shadowColor=glowColor; ctx.shadowBlur=10;
     ctx.beginPath(); ctx.moveTo(O.sx,O.sy); ctx.lineTo(E.sx,E.sy);
-    ctx.strokeStyle=color; ctx.lineWidth=3; ctx.lineCap='round'; ctx.stroke();
+    ctx.strokeStyle=color; ctx.lineWidth=_axisWidth+0.5; ctx.lineCap='round'; ctx.stroke();
     ctx.restore();
     ctx.beginPath(); ctx.moveTo(O.sx,O.sy); ctx.lineTo(E.sx,E.sy);
-    ctx.strokeStyle=color; ctx.lineWidth=2.5; ctx.lineCap='round'; ctx.stroke();
-    const hw=9;
+    ctx.strokeStyle=color; ctx.lineWidth=_axisWidth; ctx.lineCap='round'; ctx.stroke();
+    const hw = Math.max(5, LEN * 0.13);
     ctx.beginPath(); ctx.moveTo(E.sx,E.sy);
     ctx.lineTo(E.sx-hw*Math.cos(angle-0.40), E.sy-hw*Math.sin(angle-0.40));
     ctx.lineTo(E.sx-hw*Math.cos(angle+0.40), E.sy-hw*Math.sin(angle+0.40));
     ctx.closePath(); ctx.fillStyle=color; ctx.fill();
-    const lx=E.sx+12*Math.cos(angle), ly=E.sy+12*Math.sin(angle)+4;
-    ctx.font='bold 13px "JetBrains Mono",monospace';
+    const lx=E.sx+(LEN*0.17)*Math.cos(angle), ly=E.sy+(LEN*0.17)*Math.sin(angle)+4;
+    ctx.font=`bold ${Math.round(LEN*0.18)}px "JetBrains Mono",monospace`;
     ctx.save(); ctx.shadowColor=glowColor; ctx.shadowBlur=8;
     ctx.fillStyle=color; ctx.fillText(label,lx,ly); ctx.restore();
     ctx.fillStyle=color; ctx.fillText(label,lx,ly);
   });
+  const dotR = Math.max(3, LEN * 0.07);
   ctx.save(); ctx.shadowColor=glowColor; ctx.shadowBlur=10;
-  ctx.beginPath(); ctx.arc(O.sx,O.sy,5,0,Math.PI*2);
+  ctx.beginPath(); ctx.arc(O.sx,O.sy,dotR,0,Math.PI*2);
   ctx.fillStyle='#ffffff'; ctx.fill(); ctx.restore();
-  ctx.beginPath(); ctx.arc(O.sx,O.sy,5,0,Math.PI*2);
+  ctx.beginPath(); ctx.arc(O.sx,O.sy,dotR,0,Math.PI*2);
   ctx.fillStyle='#ffffff'; ctx.fill();
 }
 
@@ -342,67 +345,52 @@ function showTip(info, cfg){
 // ═══════════════════════════════════════════════════════════
 function applySciScale(scale){
   SCI_SCALE = scale;
-  document.getElementById('sci-column').style.setProperty('--sci-scale', scale);
-  document.getElementById('sci-column').style.width = Math.round(260 * scale) + 'px';
-}
-
-// ── Sci panel adaptive colors ─────────────────────────────
-// Computes perceived luminance of the blended panel+map background
-// and sets text and border colors for maximum readability.
-function sciPanelTextColors(){
-  // Panel bg: SCI_BG_COLOR at alpha 0.72, over map BG_COLOR
-  const panelRgb = SCI_BG_COLOR === null
-    ? [8,10,20]
-    : hexToRgb(SCI_BG_COLOR);
-  const bgRgb = hexToRgb(BG_COLOR);
-  const a = 0.72;
-  // Alpha composite
-  const blended = panelRgb.map((c,i) => Math.round(c*a + bgRgb[i]*(1-a)));
-  // Relative luminance (WCAG formula)
-  const lum = blended.map(c => {
-    const s = c/255;
-    return s <= 0.04045 ? s/12.92 : Math.pow((s+0.055)/1.055, 2.4);
-  });
-  const L = 0.2126*lum[0] + 0.7152*lum[1] + 0.0722*lum[2];
-  // Dark bg → light text; light bg → dark text
-  const isDark = L < 0.35;
-  return {
-    text:      isDark ? 'rgba(255,255,255,0.92)' : 'rgba(0,0,0,0.85)',
-    textMuted: isDark ? 'rgba(255,255,255,0.50)' : 'rgba(0,0,0,0.45)',
-    textDim:   isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.30)',
-    border:    isDark ? 'rgba(255,255,255,0.15)'  : 'rgba(0,0,0,0.18)',
-    divider:   isDark ? 'rgba(255,255,255,0.10)'  : 'rgba(0,0,0,0.12)',
-    titleBorder: isDark ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.22)',
-  };
+  const col = document.getElementById('sci-column');
+  col.style.setProperty('--sci-scale', String(scale));
+  col.style.width    = Math.round(220 * scale) + 'px';
+  col.style.minWidth = Math.round(220 * scale) + 'px';
 }
 
 function applySciColors(){
-  const c = sciPanelTextColors();
-  const bgAlpha = SCI_BG_COLOR === null
-    ? 'rgba(8,10,20,0.72)'
-    : hexToRgba(SCI_BG_COLOR, 0.72);
+  const panelRgb = SCI_BG_COLOR ? hexToRgb(SCI_BG_COLOR) : [12,14,26];
+  const bgRgb    = hexToRgb(BG_COLOR);
+  const a        = 0.78;
+  const blended  = panelRgb.map((c,i) => Math.round(c*a + bgRgb[i]*(1-a)));
+  const lum      = blended.map(c => { const s=c/255; return s<=0.04045?s/12.92:Math.pow((s+0.055)/1.055,2.4); });
+  const L        = 0.2126*lum[0]+0.7152*lum[1]+0.0722*lum[2];
+  const isDark   = L < 0.35;
+
+  const bg       = SCI_BG_COLOR ? hexToRgba(SCI_BG_COLOR, 0.88) : 'rgba(12,14,26,0.78)';
+  const ink      = isDark ? 'rgba(255,255,255,0.88)' : 'rgba(0,0,0,0.85)';
+  const inkTitle = isDark ? 'rgba(255,255,255,0.82)' : 'rgba(0,0,0,0.75)';
+  const inkDim   = isDark ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.50)';
+  const inkFaint = isDark ? 'rgba(255,255,255,0.52)' : 'rgba(0,0,0,0.45)';
+  const border   = isDark ? 'rgba(255,255,255,0.32)' : 'rgba(0,0,0,0.40)';
+  const accent   = isDark ? 'rgba(255,255,255,0.75)' : 'rgba(0,0,0,0.70)';
+  const divider  = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
+  const titleRule= isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.10)';
 
   document.querySelectorAll('.sci-panel').forEach(p => {
-    p.style.background   = bgAlpha;
-    p.style.color        = c.text;
-    p.style.borderColor  = c.border;
+    p.style.background      = bg;
+    p.style.color           = ink;
+    p.style.borderColor     = border;
+    p.style.borderLeftColor = accent;
   });
   document.querySelectorAll('.sci-panel-title').forEach(el => {
-    el.style.color       = c.textMuted;
-    el.style.borderBottomColor = c.titleBorder;
+    el.style.color             = inkTitle;
+    el.style.borderBottomColor = titleRule;
   });
   document.querySelectorAll('.sci-meta-key, .sci-hex-key, .sci-layer-props').forEach(el => {
-    el.style.color = c.textDim;
+    el.style.color = inkFaint;
   });
   document.querySelectorAll('.sci-meta-val, .sci-hex-val, .sci-layer-name').forEach(el => {
-    el.style.color = c.text;
+    el.style.color = ink;
   });
   document.querySelectorAll('.sci-layer-row').forEach(el => {
-    el.style.borderBottomColor = c.divider;
+    el.style.borderBottomColor = divider;
   });
-  // meta divider in sci-meta-block
   const mb = document.getElementById('sci-meta-block');
-  if(mb) mb.style.borderBottomColor = c.divider;
+  if(mb) mb.style.borderBottomColor = divider;
 }
 
 function applySciBackground(colorHex){
@@ -454,7 +442,7 @@ function updateSciHexPanel(){
     <div class="sci-hex-cell"><div class="sci-hex-key">Aire moy.</div><div class="sci-hex-val">${areaKm2} km²</div></div>
     <div class="sci-hex-cell" style="grid-column:1/-1">
       <div class="sci-hex-key">Identifiant H3</div>
-      <div class="sci-hex-val" style="font-size:calc(var(--sci-scale,1)*8.5px);letter-spacing:.05em;word-break:break-all">${d.cell}</div>
+      <div class="sci-hex-val" style="font-size:calc(var(--sci-scale,1)*9.5px);letter-spacing:.05em;word-break:break-all">${d.cell}</div>
     </div>`;
   // Reapply colors to newly created elements
   if(SHOW_SCI) applySciColors();
@@ -470,6 +458,7 @@ function setSciPanelVisible(on){
     col.classList.toggle('side-left',  SCI_SIDE==='left');
     if(opts) opts.style.display='flex';
     document.getElementById('tooltip').style.display='none';
+    applySciScale(SCI_SCALE);
     applySciBackground(SCI_BG_COLOR);
     updateSciPanel(); updateSciHexPanel();
   } else {
@@ -511,14 +500,44 @@ function applyLayerEdit(idx,f){
 function deleteLayer(idx){ FLAT_LAYERS.splice(idx,1); rebuildState(); }
 
 function addLayer(){
-  const last=FLAT_LAYERS[FLAT_LAYERS.length-1]||{altitude:0,resolution:7,radiusKm:10};
-  const colors=['#e74c3c','#9b59b6','#f39c12','#1abc9c','#e67e22','#3498db'];
-  const base=colors[FLAT_LAYERS.length%colors.length];
+  const last = FLAT_LAYERS[FLAT_LAYERS.length-1] || {altitude:0, resolution:7, radiusKm:10};
+
+  // Analogous cool palette — blue → cyan → teal → purple → violet
+  // Complements the default layers while staying in the same cool family.
+  const coolPalette = [
+    { h: 200, s: 0.88, l: 0.52 }, // sky blue
+    { h: 175, s: 0.82, l: 0.48 }, // teal
+    { h: 220, s: 0.80, l: 0.58 }, // periwinkle
+    { h: 258, s: 0.72, l: 0.58 }, // violet
+    { h: 185, s: 0.86, l: 0.44 }, // deep cyan
+    { h: 240, s: 0.68, l: 0.62 }, // soft indigo
+    { h: 210, s: 0.84, l: 0.48 }, // cobalt
+    { h: 278, s: 0.65, l: 0.56 }, // purple
+    { h: 168, s: 0.78, l: 0.44 }, // deep teal
+    { h: 230, s: 0.76, l: 0.54 }, // steel blue
+    { h: 292, s: 0.62, l: 0.55 }, // mauve
+    { h: 193, s: 0.90, l: 0.40 }, // deep cyan-teal
+  ];
+
+  function hueToHex({h, s, l}){
+    h = ((h % 360) + 360) % 360;
+    const c=(1-Math.abs(2*l-1))*s, x=c*(1-Math.abs((h/60)%2-1)), m=l-c/2;
+    let r=0,g=0,b=0;
+    if(h<60){r=c;g=x;}else if(h<120){r=x;g=c;}else if(h<180){g=c;b=x;}
+    else if(h<240){g=x;b=c;}else if(h<300){r=x;b=c;}else{r=c;b=x;}
+    const toHex=v=>Math.round((v+m)*255).toString(16).padStart(2,'0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  }
+
+  // Pick the next unused palette entry by index, cycling if needed
+  const idx = (FLAT_LAYERS.length - 3 + coolPalette.length * 100) % coolPalette.length;
+  const best = hueToHex(coolPalette[idx]);
+
   const newId = newLayerId();
-  FLAT_LAYERS.push({id:newId,label:'New Layer',altitude:(last.altitude||0)+5000,resolution:last.resolution,radiusKm:last.radiusKm+5,baseColor:base,palette:generatePalette(base),visible:true});
+  FLAT_LAYERS.push({id:newId, label:'New Layer', altitude:(last.altitude||0)+5000, resolution:last.resolution, radiusKm:last.radiusKm+5, baseColor:best, palette:generatePalette(best), visible:true});
   rebuildState();
-  const cards=document.querySelectorAll('.layer-card');
-  const newIdx = [...document.querySelectorAll('.layer-card')].findIndex(c => c.dataset.layerId === newId);
+  const cards = document.querySelectorAll('.layer-card');
+  const newIdx = [...cards].findIndex(c => c.dataset.layerId === newId);
   const target = newIdx >= 0 ? cards[newIdx] : cards[0];
   if(target){ target.querySelector('.layer-card-body').classList.add('open'); target.querySelector('.toggle-arrow').style.transform='rotate(90deg)'; }
 }
@@ -863,9 +882,9 @@ const DRAG_RADIUS = 14; // px from origin center to start drag
       const vpRect = document.getElementById('map-viewport').getBoundingClientRect();
       const mx = e.clientX - vpRect.left, my = e.clientY - vpRect.top;
       const W = mapW(), H = mapH();
-      const LEN = 70, D = LEN + 30;
-      _axisOffsetX = Math.max(-D + LEN, Math.min(W - D - LEN*2, mx - D));
-      _axisOffsetY = Math.max(-(H - D) + LEN, Math.min(H - D - LEN, my - (H - D)));
+      const LEN = _axisLen, MARGIN = 100;
+      _axisOffsetX = Math.max(-MARGIN + LEN, Math.min(W - MARGIN - LEN*2, mx - MARGIN));
+      _axisOffsetY = Math.max(-(H - MARGIN) + LEN, Math.min(H - MARGIN - LEN, my - (H - MARGIN)));
       drawAxisOverlay();
       return;
     }
@@ -896,7 +915,21 @@ document.getElementById('btn-show-all').addEventListener('click',()=>{ FLAT_LAYE
 document.getElementById('btn-hide-all').addEventListener('click',()=>{ FLAT_LAYERS.forEach(c=>c.visible=false); buildLayerEditor(); render(); updateSciPanel(); });
 document.getElementById('chk-flow').addEventListener('change',e=>{ SHOW_FLOW=e.target.checked; render(); });
 document.getElementById('chk-map').addEventListener('change',e=>{ SHOW_MAP=e.target.checked; applyMapVisibility(); });
-document.getElementById('chk-axis').addEventListener('change',e=>{ SHOW_AXIS=e.target.checked; drawAxisOverlay(); });
+document.getElementById('chk-axis').addEventListener('change',e=>{
+  SHOW_AXIS=e.target.checked;
+  document.getElementById('axis-options').style.display = SHOW_AXIS ? 'flex' : 'none';
+  drawAxisOverlay();
+});
+document.getElementById('axis-len').addEventListener('input', e=>{
+  _axisLen = parseInt(e.target.value);
+  document.getElementById('axis-len-val').textContent = _axisLen + 'px';
+  drawAxisOverlay();
+});
+document.getElementById('axis-width').addEventListener('input', e=>{
+  _axisWidth = parseFloat(e.target.value);
+  document.getElementById('axis-width-val').textContent = _axisWidth + 'px';
+  drawAxisOverlay();
+});
 document.getElementById('chk-sci').addEventListener('change',e=>{ setSciPanelVisible(e.target.checked); });
 document.querySelectorAll('input[name=sci-side]').forEach(r=>{
   r.addEventListener('change',e=>{ applySciSide(e.target.value); });
@@ -977,6 +1010,7 @@ map.on('load', ()=>{
   document.getElementById('chk-axis').checked = SHOW_AXIS;
   document.getElementById('chk-sci').checked  = SHOW_SCI;
   applyMapVisibility(); applyBgColor(); updateBgLabel(); rebuildState();
+  applySciScale(1);
   document.getElementById('center-color-picker').value = COLOR_WHITE;
   buildSavePanel();
   drawAxisOverlay();

@@ -31,6 +31,18 @@
     <label class="cfg-row"><input type="checkbox" id="chk-flow"><span>Flow arrows &amp; probabilities</span></label>
     <label class="cfg-row"><input type="checkbox" id="chk-map"><span>Show basemap</span></label>
     <label class="cfg-row"><input type="checkbox" id="chk-axis"><span>Show axes</span></label>
+    <div id="axis-options" style="display:none;flex-direction:column;gap:4px;margin:4px 0 2px 18px">
+      <div class="field-row" style="align-items:center">
+        <label style="width:52px">Length</label>
+        <input type="range" id="axis-len" min="30" max="200" value="70" style="width:90px;flex:none">
+        <span id="axis-len-val" style="font-size:9px;color:rgba(255,255,255,0.5);width:34px;text-align:right;flex-shrink:0">70px</span>
+      </div>
+      <div class="field-row" style="align-items:center">
+        <label style="width:52px">Width</label>
+        <input type="range" id="axis-width" min="1" max="8" value="2" step="0.5" style="width:90px;flex:none">
+        <span id="axis-width-val" style="font-size:9px;color:rgba(255,255,255,0.5);width:34px;text-align:right;flex-shrink:0">2px</span>
+      </div>
+    </div>
     <label class="cfg-row"><input type="checkbox" id="chk-sci"><span>Show informative panels</span></label>
     <div id="sci-options" style="display:none;flex-direction:column;gap:4px;margin:4px 0 2px 18px">
       <div style="display:flex;gap:10px">
@@ -120,9 +132,9 @@
   <div id="sci-column">
     <div class="sci-panel" id="sci-layers-panel">
       <div class="sci-panel-title"><span>⬡</span> Couches de modélisation</div>
-      <div id="sci-meta-block" style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(255,255,255,0.10)">
+      <div id="sci-meta-block" style="margin-bottom:calc(var(--sci-scale,1)*5px);padding-bottom:calc(var(--sci-scale,1)*5px);border-bottom:1px solid rgba(255,255,255,0.10)">
         <div class="sci-meta-row"><span class="sci-meta-key">Centre</span><span class="sci-meta-val" id="sci-center-val">—</span></div>
-        <div class="sci-meta-row"><span class="sci-meta-key">Grille</span><span class="sci-meta-val">H3 Hexagonale (Uber)</span></div>
+        <div class="sci-meta-row"><span class="sci-meta-key">Grille</span><span class="sci-meta-val">H3 hexagonale</span></div>
       </div>
       <div id="sci-layers-body"></div>
     </div>
